@@ -25,21 +25,45 @@ Answer: 不是
 ## 1 
 在训练集那里的transform试一下RandomHorizontalFlip，效果会更好吗？
 
-Answer: 我们对数据集做了RandomHorizontalFlip的Augmentation，改动后在测试集上的准确率为：
+Answer: 
+我们对数据集做了RandomHorizontalFlip的Augmentation，改动后在测试集上的准确率为56%，与原来相比没有明显变化
+其Training Loss在最后一个epoch平均为1.226，相较原来的版本中的1.209高了一点，这是在预期之中的，因为增加Augmentation之后过拟合的程度降低了，Training Loss会提高
+实际上，由于这个Augmentation是比较弱的，所以效果并不明显
+
+
 
 ## 2 
 换一个optimizer, 使效果更好一些
 
 Answer: 我们可以使用Adam来大幅优化训练效率
 ```python
-
+self.optimizer = torch.optim.Adam(self.model.parameters(), lr=Config.LEARNING_RATE)
 ```
+用其训练后，收敛速度大幅提高，且最终精度也大幅提高：
+
+对比它与原来的SGD在每个epoch的表现如下：
+| epoch |  SGD  | Adam  |
+| :---: | :---: | :---: |
+|   1   |  16%  |  48%  |
+|   2   |  29%  |  54%  |
+|   3   |  36%  |  57%  |
+|   4   |  40%  |  60%  |
+|   5   |  43%  |  62%  |
+|   6   |  46%  |  62%  |
+|   7   |  48%  |  63%  |
+|   8   |  50%  |  64%  |
+|   9   |  51%  |  63%  |
+|  10   |  53%  |  65%  |
+|  11   |  55%  |  64%  |
+|  12   |  56%  |  65%  |
+
 
 ## 3 
 保持epoch数不变，加一个scheduler，是否能让效果更好一些
 
 Answer: 
-我们使用最简单的StepLR来进行学习率的调整，效果如下：
+我们使用最简单的StepLR来进行学习率的调整，我们设置的参数令其每过三个epoch学习率减半
+
 
 ## 4 
 根据Net() 生成 Net1(), 加入三个batch_normalization层，显示测试结果

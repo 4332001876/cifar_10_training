@@ -14,7 +14,14 @@ class Trainer:
             self.load_model(Config.PRETRAINED_MODEL_PATH)
 
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.SGD(model.parameters(), lr=Config.LEARNING_RATE, momentum=Config.MOMENTUM)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=Config.LEARNING_RATE)
+        # optim.SGD(model.parameters(), lr=Config.LEARNING_RATE, momentum=Config.MOMENTUM)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(
+            self.optimizer,
+            step_size=Config.STEP_LR_STEP_SIZE,
+            gamma=Config.STEP_LR_GAMMA,
+            verbose=True,
+        )
 
         self.dataset_manager = Dataset_Manager()
         self.trainloader = self.dataset_manager.get_trainloader()
@@ -45,6 +52,7 @@ class Trainer:
                     print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / log_interval:.3f}')
                     running_loss = 0.0
             self.test()
+            self.scheduler.step()
             self.save_model(Config.SAVE_MODEL_PATH)
         self.save_model(Config.SAVE_FINAL_MODEL_PATH)
         print('Finished Training')

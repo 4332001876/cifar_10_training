@@ -7,8 +7,8 @@ class Dataset_Manager:
     def __init__(self) -> None:
         self.transform = transforms.Compose(
         [transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))],
-        transforms.RandomHorizontalFlip(p=0.5))
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        transforms.RandomHorizontalFlip(p=0.5)])
 
         trainset = torchvision.datasets.CIFAR10(root=Config.DATASET_PATH, train=True,
                                                 download=False, transform=self.transform)
