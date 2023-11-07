@@ -5,11 +5,11 @@ from config import Config
 
 class Tester:
     def __init__(self):
+        seed_torch(Config.RANDOM_SEED)
         self.model = BaselineModel()
         self.trainer = Trainer(self.model)
 
     def train(self):
-        seed_torch(Config.RANDOM_SEED)
         self.trainer.train()
         self.trainer.test()
 

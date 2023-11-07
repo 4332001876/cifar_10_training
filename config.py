@@ -6,7 +6,7 @@ class Config:
     PRETRAINED = False
 
     # 数据集路径
-    DATASET_PATH = 'tmp/cifar_10'
+    DATASET_PATH = 'tmp/cifar-10'
 
     # 训练参数
     EPOCHS = 12

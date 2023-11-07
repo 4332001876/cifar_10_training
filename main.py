@@ -5,8 +5,9 @@ from utils import seed_torch
 	
 def main(model):
     seed_torch(Config.RANDOM_SEED)
-    trainer = Trainer(model)
-
-if __name__ == '__main__':
     model = BaselineModel()
-    main(model)
+    trainer = Trainer(model)
+    trainer.train()
+
+if __name__ == '__main__':  
+    main()
