@@ -9,7 +9,7 @@ class Tester:
         self.trainer = Trainer(self.model)
 
     def train(self):
-        seed_torch(Config.SEED)
+        seed_torch(Config.RANDOM_SEED)
         self.trainer.train()
         self.trainer.test()
 

@@ -14,7 +14,7 @@ class Trainer:
             self.load_model(Config.PRETRAINED_MODEL_PATH)
 
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.SGD(model.parameters(), lr=Config.LEARNING_RATE, momentum=0.9)
+        self.optimizer = optim.SGD(model.parameters(), lr=Config.LEARNING_RATE, momentum=Config.MOMENTUM)
 
         self.dataset_manager = Dataset_Manager()
         self.trainloader = self.dataset_manager.get_trainloader()
@@ -22,7 +22,7 @@ class Trainer:
 
     def train(self):    
         log_interval = 100
-        for epoch in range(12):  # loop over the dataset multiple times
+        for epoch in range(Config.EPOCHS):  # loop over the dataset multiple times
             self.model.train()
             running_loss = 0.0
             for i, data in enumerate(self.trainloader, 0):
