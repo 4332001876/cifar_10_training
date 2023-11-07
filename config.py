@@ -11,10 +11,10 @@ class Config:
     # 训练参数
     EPOCHS = 12
     BATCH_SIZE = 64
-    LEARNING_RATE = 0.001
+    LEARNING_RATE = 0.002
     MOMENTUM = 0.9
     
-    STEP_LR_STEP_SIZE = 3
+    STEP_LR_STEP_SIZE = 5
     STEP_LR_GAMMA = 0.5
 
     RANDOM_SEED = 10

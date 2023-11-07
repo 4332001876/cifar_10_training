@@ -62,28 +62,85 @@ self.optimizer = torch.optim.Adam(self.model.parameters(), lr=Config.LEARNING_RA
 保持epoch数不变，加一个scheduler，是否能让效果更好一些
 
 Answer: 
-我们使用最简单的StepLR来进行学习率的调整，我们设置的参数令其每过三个epoch学习率减半
+我们使用最简单的StepLR来进行学习率的调整，我们设置的参数令其每过5个epoch学习率减半，初始学习率设为0.002，分别对SGD与Adam测试如下：
+|    Group     | SGD-Accuracy | SGD-Loss | Adam-Accuracy | Adam-Loss |
+| :----------: | :----------: | :------: | :-----------: | :-------: |
+| No-Scheduler |     56%      |  1.211   |      65%      |   0.779   |
+|   Step-LR    |     60%      |  1.068   |      65%      |   0.668   |
+
+可以看到，使用StepLR后，SGD的效果有了一定的提升，而Adam的效果没有明显变化，但两个优化器训出来的Loss都有了明显的下降，这说明了学习率的调整是有效的，而Adam的效果没有明显变化可能是因为过拟合了。
 
 
 ## 4 
 根据Net() 生成 Net1(), 加入三个batch_normalization层，显示测试结果
 
 Answer: 
+在两个卷积层和第一个线性层后加入BN层后，在测试集上的准确率为65%，较原来提升了9%，可见BatchNorm对效果的提升极为显著
+
+具体代码如下：
+```python
+def forward(self, x):
+    x = self.pool(F.relu(self.conv1(x)))
+    x = self.bn1(x)
+    x = self.pool(F.relu(self.conv2(x)))
+    x = self.bn2(x)
+    x = torch.flatten(x, 1) # flatten all dimensions except batch
+    x = F.relu(self.fc1(x))
+    x = self.bn3(x)
+    x = F.relu(self.fc2(x))
+    x = self.fc3(x)
+    return x
+```
 
 ## 5 
 根据Net() 生成Net2(), 使用Kaiming初始化卷积与全连接层，显示测试结果
 
 Answer: 
+加入Kaiming初始化后，在测试集上的准确率为57%，较原来提升了1%。
+
+实际上，`nn.Linear`及`nn.Conv2d`的父类`nn._ConvNd`的初始化默认就使用了Kaiming初始化，它们初始化时都调用了以下函数：
+```python
+def reset_parameters(self) -> None:
+    # Setting a=sqrt(5) in kaiming_uniform is the same as initializing with
+    # uniform(-1/sqrt(in_features), 1/sqrt(in_features)). For details, see
+    # https://github.com/pytorch/pytorch/issues/57109
+    init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+    if self.bias is not None:
+        fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+        bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+        init.uniform_(self.bias, -bound, bound)
+```
+
+此处的提升可能是因为Kaiming初始化的参数不一样。
 
 ## 6 
 根据Net()生成Net3(),将Net()中的通道数加到原来的2倍，显示测试结果
 
 Answer: 
+通道数翻倍后，在测试集上的准确率为60%，较原来提升了4%，可见提升通道数有一定效果。
 
 ## 7 
 在不改变Net()的基础结构（卷积层数、全连接层数不变）和训练epoch数的前提下，你能得到最好的结果是多少？
 
 Answer: 
+我们进行了如下改进：
+- 使用Adam优化器，使用StepLR，令其每过5个epoch学习率减半，初始学习率设为0.002
+- 同上述BN网络加入三个BatchNorm层
+- 前两层卷积层通道数分别改为128与256
+- 采用了大量数据增强，具体如下（其中AutoAugment()来自论文'AugMix: A Simple Data Processing Method to Improve Robustness and Uncertainty - https://arxiv.org/abs/1912.02781）：
+```python
+def get_transform(self):
+    res = []
+    res.append(transforms.RandomHorizontalFlip(p=0.5))
+    res.extend([transforms.Pad(4, padding_mode='constant'),
+                    transforms.RandomCrop([32,32])])
+    res.append(transforms.RandomApply([AutoAugment()], p=0.3))
+    res.append(transforms.ToTensor())
+    res += [transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+    return transforms.Compose(res)
+```
+
+最终在测试集上的准确率为77%，较原来提升了21%。
 
 ## 8 
 使用ResNet18(),显示测试结果

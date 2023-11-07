@@ -64,6 +64,12 @@ class KaimingInitModel(nn.Module): # Using Kaiming Initialization (Net2)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
+        torch.nn.init.kaiming_uniform_(self.conv1.weight, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_uniform_(self.conv2.weight, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_uniform_(self.fc1.weight, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_uniform_(self.fc2.weight, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_uniform_(self.fc3.weight, a=0, mode='fan_in', nonlinearity='relu')
+
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
@@ -76,11 +82,11 @@ class KaimingInitModel(nn.Module): # Using Kaiming Initialization (Net2)
 class DoubleChannelModel(nn.Module): # Doubling the Channel (Net3)
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv1 = nn.Conv2d(3, 12, 5)
         self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.conv2 = nn.Conv2d(12, 32, 5)
         
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc1 = nn.Linear(32 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
@@ -93,7 +99,35 @@ class DoubleChannelModel(nn.Module): # Doubling the Channel (Net3)
         x = self.fc3(x)
         return x
     
-class Resnet18(nn.Module): # Resnet18
+class BetterBaselineModel(nn.Module): # Better Baseline Model (Net4)
+    def __init__(self):
+        super().__init__()
+        channel1 = 128
+        channel2 = 256
+        self.conv1 = nn.Conv2d(3, channel1, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.bn1 = nn.BatchNorm2d(channel1)
+        self.conv2 = nn.Conv2d(channel1, channel2, 5)
+        self.bn2 = nn.BatchNorm2d(channel2)
+        
+        self.fc1 = nn.Linear(channel2 * 5 * 5, 120)
+        self.bn3 = nn.BatchNorm1d(120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.bn1(x)
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.bn2(x)
+        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        x = F.relu(self.fc1(x))
+        x = self.bn3(x)
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+    
+class ResNet18(nn.Module): # Resnet18
     def __init__(self):
         self.model = torchvision.models.resnet18(pretrained=Config.PRETRAINED)
         self.model.fc = nn.Linear(512, 10)

@@ -1,4 +1,4 @@
-from model import BaselineModel
+from model import BaselineModel, BnModel, KaimingInitModel, DoubleChannelModel, BetterBaselineModel, ResNet18
 from trainer import Trainer
 from utils import seed_torch
 from config import Config
@@ -6,7 +6,7 @@ from config import Config
 class Tester:
     def __init__(self):
         seed_torch(Config.RANDOM_SEED)
-        self.model = BaselineModel()
+        self.model = BetterBaselineModel()
         self.trainer = Trainer(self.model)
 
     def train(self):
