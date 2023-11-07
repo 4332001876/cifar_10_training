@@ -1,47 +1,76 @@
-def train(model, trainloader, device, criterion, optimizer):
-    model.train()
-    log_interval = 100
-    for epoch in range(12):  # loop over the dataset multiple times
+import torch
+import torch.optim as optim
+import torch.nn as nn
+from config import Config
+from data_manager import Dataset_Manager
 
-        running_loss = 0.0
-        for i, data in enumerate(trainloader, 0):
-            # get the inputs; data is a list of [inputs, labels]
-            inputs, labels = data
-            inputs = inputs.to(device)
-            labels = labels.to(device)
-            # zero the parameter gradients
-            optimizer.zero_grad()
+class Trainer:
+    def __init__(self,model) -> None:
+        self.model = model
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        print("Running on device:", self.device)
+        self.model = self.model.to(self.device)
+        if Config.PRETRAINED:
+            self.load_model(Config.PRETRAINED_MODEL_PATH)
 
-            # forward + backward + optimize
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+        self.criterion = nn.CrossEntropyLoss()
+        self.optimizer = optim.SGD(model.parameters(), lr=Config.LEARNING_RATE, momentum=0.9)
 
-            # print statistics
-            running_loss += loss.item()
-            if i % log_interval == log_interval - 1:    
-                print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / log_interval:.3f}')
-                running_loss = 0.0
+        self.dataset_manager = Dataset_Manager()
+        self.trainloader = self.dataset_manager.get_trainloader()
+        self.testloader = self.dataset_manager.get_testloader()
 
-    print('Finished Training')
+    def train(self):    
+        log_interval = 100
+        for epoch in range(12):  # loop over the dataset multiple times
+            self.model.train()
+            running_loss = 0.0
+            for i, data in enumerate(self.trainloader, 0):
+                # get the inputs; data is a list of [inputs, labels]
+                inputs, labels = data
+                inputs = inputs.to(self.device)
+                labels = labels.to(self.device)
+                # zero the parameter gradients
+                self.optimizer.zero_grad()
 
-def test(model, testloader, device):
+                # forward + backward + optimize
+                outputs = self.model(inputs)
+                loss = self.criterion(outputs, labels)
+                loss.backward()
+                self.optimizer.step()
 
-    correct = 0
-    total = 0
-    model.eval()
-    # since we're not training, we don't need to calculate the gradients for our outputs
-    with torch.no_grad():
-        for data in testloader:
-            images, labels = data
-            images = images.to(device)
-            labels = labels.to(device)
-            # calculate outputs by running images through the network
-            outputs = model(images)
-            # the class with the highest energy is what we choose as prediction
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+                # print statistics
+                running_loss += loss.item()
+                if i % log_interval == log_interval - 1:    
+                    print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / log_interval:.3f}')
+                    running_loss = 0.0
+            self.test()
+            self.save_model(Config.SAVE_MODEL_PATH)
+        self.save_model(Config.SAVE_FINAL_MODEL_PATH)
+        print('Finished Training')
 
-    print(f'Accuracy of the network on the 10000 test images: {100 * correct // total} %')
+    def test(self):#model, testloader, device
+
+        correct = 0
+        total = 0
+        self.model.eval()
+        # since we're not training, we don't need to calculate the gradients for our outputs
+        with torch.no_grad():
+            for data in self.testloader:
+                images, labels = data
+                images = images.to(self.device)
+                labels = labels.to(self.device)
+                # calculate outputs by running images through the network
+                outputs = self.model(images)
+                # the class with the highest energy is what we choose as prediction
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+
+        print(f'Accuracy of the network on the 10000 test images: {100 * correct // total} %')
+
+    def load_model(self, path):
+        self.model.load_state_dict(torch.load(path, map_location=self.device))
+
+    def save_model(self, path):
+        torch.save(self.model.state_dict(), path)
