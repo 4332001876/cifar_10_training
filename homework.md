@@ -124,23 +124,23 @@ Answer:
 
 Answer: 
 我们进行了如下改进：
-- 使用Adam优化器，使用StepLR，令其每过5个epoch学习率减半，初始学习率设为0.002
-- 同上述BN网络加入三个BatchNorm层
-- 前两层卷积层通道数分别改为128与256
+- 使用Adam优化器，增加了0.0001的WEIGHT_DECAY，使用`CosineAnnealingLR`余弦退火学习率调整器，初始学习率设为0.002
+- 同上述BN网络加入三个BatchNorm层，并加入了三个p=0.1的dropout层，这三个层正好加在BatchNorm层之后
+- 前两层卷积层通道数分别改为256与256
 - 采用了大量数据增强，具体如下（其中AutoAugment()来自论文'AugMix: A Simple Data Processing Method to Improve Robustness and Uncertainty - https://arxiv.org/abs/1912.02781）：
 ```python
 def get_transform(self):
     res = []
     res.append(transforms.RandomHorizontalFlip(p=0.5))
-    res.extend([transforms.Pad(4, padding_mode='constant'),
+    res.extend([transforms.Pad(2, padding_mode='constant'),
                     transforms.RandomCrop([32,32])])
-    res.append(transforms.RandomApply([AutoAugment()], p=0.3))
+    res.append(transforms.RandomApply([AutoAugment()], p=0.6))
     res.append(transforms.ToTensor())
     res += [transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
     return transforms.Compose(res)
 ```
 
-最终在测试集上的准确率为77%，较原来提升了21%。
+最终在测试集上的准确率为83%，较原来提升了27%。
 
 ## 8 
 使用ResNet18(),显示测试结果

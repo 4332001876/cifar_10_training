@@ -102,27 +102,33 @@ class DoubleChannelModel(nn.Module): # Doubling the Channel (Net3)
 class BetterBaselineModel(nn.Module): # Better Baseline Model (Net4)
     def __init__(self):
         super().__init__()
-        channel1 = 128
+        channel1 = 256
         channel2 = 256
         self.conv1 = nn.Conv2d(3, channel1, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.bn1 = nn.BatchNorm2d(channel1)
+        self.dropout1 = nn.Dropout(0.1)
         self.conv2 = nn.Conv2d(channel1, channel2, 5)
         self.bn2 = nn.BatchNorm2d(channel2)
+        self.dropout2 = nn.Dropout(0.1)
         
         self.fc1 = nn.Linear(channel2 * 5 * 5, 120)
         self.bn3 = nn.BatchNorm1d(120)
+        self.dropout3 = nn.Dropout(0.1)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.bn1(x)
+        x = self.dropout1(x)
         x = self.pool(F.relu(self.conv2(x)))
         x = self.bn2(x)
+        x = self.dropout2(x)
         x = torch.flatten(x, 1) # flatten all dimensions except batch
         x = F.relu(self.fc1(x))
         x = self.bn3(x)
+        x = self.dropout3(x)
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x

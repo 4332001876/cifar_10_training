@@ -14,14 +14,16 @@ class Trainer:
             self.load_model(Config.PRETRAINED_MODEL_PATH)
 
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=Config.LEARNING_RATE)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=Config.LEARNING_RATE, weight_decay=Config.WEIGHT_DECAY)
         # self.optimizer = optim.SGD(model.parameters(), lr=Config.LEARNING_RATE, momentum=Config.MOMENTUM)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(
+        """self.scheduler = torch.optim.lr_scheduler.StepLR(
             self.optimizer,
             step_size=Config.STEP_LR_STEP_SIZE,
             gamma=Config.STEP_LR_GAMMA,
             verbose=True,
-        )
+        )"""
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer = self.optimizer, T_max =  Config.EPOCHS+1, verbose = True)
+
 
         self.dataset_manager = Dataset_Manager()
         self.trainloader = self.dataset_manager.get_trainloader()

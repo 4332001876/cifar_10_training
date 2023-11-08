@@ -13,6 +13,7 @@ class Config:
     BATCH_SIZE = 64
     LEARNING_RATE = 0.002
     MOMENTUM = 0.9
+    WEIGHT_DECAY = 0.0001
     
     STEP_LR_STEP_SIZE = 5
     STEP_LR_GAMMA = 0.5
