@@ -3,6 +3,7 @@ class Config:
     SAVE_MODEL_PATH = 'tmp/cifar_10_model.pth'
     SAVE_FINAL_MODEL_PATH = 'tmp/cifar_10_final_model.pth'
     PRETRAINED_MODEL_PATH = 'tmp/cifar_10_model.pth'
+    RESNET_PRETRAINED_PATH = 'tmp/resnet18-f37072fd.pth'
     PRETRAINED = False
 
     # 数据集路径

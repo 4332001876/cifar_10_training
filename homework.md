@@ -146,7 +146,6 @@ def get_transform(self):
 使用ResNet18(),显示测试结果
 
 Answer: 
-使用了大名鼎鼎的resnet-18之后
+使用resnet-18，上一问其它参数不变，在测试集上的准确率为83%，与上一问的结果相同。
 
-我们顺便测试了pretrained的resnet-18的精度，我们将最后一层替换为10维，进行finetune后，
-发现在测试集上的准确率为：
+

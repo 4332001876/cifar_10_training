@@ -111,7 +111,7 @@ class BetterBaselineModel(nn.Module): # Better Baseline Model (Net4)
         self.conv2 = nn.Conv2d(channel1, channel2, 5)
         self.bn2 = nn.BatchNorm2d(channel2)
         self.dropout2 = nn.Dropout(0.1)
-        
+
         self.fc1 = nn.Linear(channel2 * 5 * 5, 120)
         self.bn3 = nn.BatchNorm1d(120)
         self.dropout3 = nn.Dropout(0.1)
@@ -133,14 +133,16 @@ class BetterBaselineModel(nn.Module): # Better Baseline Model (Net4)
         x = self.fc3(x)
         return x
     
-class ResNet18(nn.Module): # Resnet18
+class ResNet(nn.Module): # Resnet18
     def __init__(self):
-        self.model = torchvision.models.resnet18(pretrained=Config.PRETRAINED)
-        self.model.fc = nn.Linear(512, 10)
+        super().__init__()
+        self.model = torchvision.models.resnet18(pretrained=False)
         if Config.PRETRAINED:
+            self.model.load_state_dict(torch.load(Config.RESNET_PRETRAINED_PATH))
             for param in self.model.parameters():
                 param.requires_grad = False
-            self.model.fc.requires_grad_(True)
+        self.model.fc = nn.Linear(512, 10)
+        self.model.fc.requires_grad_(True)
 
     def forward(self, x):
         x = self.model(x)

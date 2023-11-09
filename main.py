@@ -1,4 +1,4 @@
-from model import BaselineModel
+from model import BaselineModel, BnModel, KaimingInitModel, DoubleChannelModel, BetterBaselineModel, ResNet
 from trainer import Trainer
 from config import Config
 from utils import seed_torch
