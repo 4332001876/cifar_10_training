@@ -57,6 +57,7 @@ self.optimizer = torch.optim.Adam(self.model.parameters(), lr=Config.LEARNING_RA
 |  11   |  55%  |  64%  |
 |  12   |  56%  |  65%  |
 
+这样的结果在预期之中，毕竟Adam已经成为广大深度学习任务的标配优化器了，它在二阶上对动量进行修正，使得在loss的landscape较为极端的情况下，仍能保持较好的收敛性。
 
 ## 3 
 保持epoch数不变，加一个scheduler，是否能让效果更好一些
@@ -68,28 +69,45 @@ Answer:
 | No-Scheduler |     56%      |  1.211   |      65%      |   0.779   |
 |   Step-LR    |     60%      |  1.068   |      65%      |   0.668   |
 
-可以看到，使用StepLR后，SGD的效果有了一定的提升，而Adam的效果没有明显变化，但两个优化器训出来的Loss都有了明显的下降，这说明了学习率的调整是有效的，而Adam的效果没有明显变化可能是因为过拟合了。
+可以看到，使用StepLR后，SGD的效果有了一定的提升，而Adam的效果没有明显变化，但两个优化器训出来的Loss都有了明显的下降，这说明了学习率的调整是有效的，的确和调小学习率能促进收敛的预期一致，而Adam的效果没有明显变化可能是因为过拟合了。
 
 
 ## 4 
 根据Net() 生成 Net1(), 加入三个batch_normalization层，显示测试结果
 
 Answer: 
-在两个卷积层和第一个线性层后加入BN层后，在测试集上的准确率为65%，较原来提升了9%，可见BatchNorm对效果的提升极为显著
+在两个卷积层和第一个线性层后加入BN层后，在测试集上的准确率为65%，较原来提升了9%，可见BatchNorm对效果的提升极为显著。
+BatchNorm能提升效果主要是因为：
+- 可以保证各层数据特征分布的稳定性，使得模型更容易收敛，不容易梯度消失或爆炸
+- 可以保证隐含层输出集中在一般激活函数的主要非线性区
 
 具体代码如下：
 ```python
-def forward(self, x):
-    x = self.pool(F.relu(self.conv1(x)))
-    x = self.bn1(x)
-    x = self.pool(F.relu(self.conv2(x)))
-    x = self.bn2(x)
-    x = torch.flatten(x, 1) # flatten all dimensions except batch
-    x = F.relu(self.fc1(x))
-    x = self.bn3(x)
-    x = F.relu(self.fc2(x))
-    x = self.fc3(x)
-    return x
+class BnModel(nn.Module): # Add Batch Normalization (Net1)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.bn1 = nn.BatchNorm2d(6)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.bn2 = nn.BatchNorm2d(16)
+        
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.bn3 = nn.BatchNorm1d(120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.bn1(x)
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.bn2(x)
+        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        x = F.relu(self.fc1(x))
+        x = self.bn3(x)
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
 ```
 
 ## 5 
@@ -113,11 +131,65 @@ def reset_parameters(self) -> None:
 
 此处的提升可能是因为Kaiming初始化的参数不一样。
 
+该网络具体代码如下：
+```python
+class KaimingInitModel(nn.Module): # Using Kaiming Initialization (Net2)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+        torch.nn.init.kaiming_uniform_(self.conv1.weight, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_uniform_(self.conv2.weight, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_uniform_(self.fc1.weight, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_uniform_(self.fc2.weight, a=0, mode='fan_in', nonlinearity='relu')
+        torch.nn.init.kaiming_uniform_(self.fc3.weight, a=0, mode='fan_in', nonlinearity='relu')
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+```
+
 ## 6 
 根据Net()生成Net3(),将Net()中的通道数加到原来的2倍，显示测试结果
 
 Answer: 
-通道数翻倍后，在测试集上的准确率为60%，较原来提升了4%，可见提升通道数有一定效果。
+通道数翻倍后，在测试集上的准确率为60%，较原来提升了4%，可见提升通道数有一定效果。这主要是因为通道数增加后，卷积核的种类增加了，能提取的特征种类也增加了。
+
+具体代码如下：
+```python
+class DoubleChannelModel(nn.Module): # Doubling the Channel (Net3)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 12, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(12, 32, 5)
+        
+        self.fc1 = nn.Linear(32 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+```
+
+
 
 ## 7 
 在不改变Net()的基础结构（卷积层数、全连接层数不变）和训练epoch数的前提下，你能得到最好的结果是多少？
@@ -142,10 +214,66 @@ def get_transform(self):
 
 最终在测试集上的准确率为83%，较原来提升了27%。
 
+模型具体代码如下：
+```python
+class BetterBaselineModel(nn.Module): # Better Baseline Model (Net4)
+    def __init__(self):
+        super().__init__()
+        channel1 = 256
+        channel2 = 256
+        self.conv1 = nn.Conv2d(3, channel1, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.bn1 = nn.BatchNorm2d(channel1)
+        self.dropout1 = nn.Dropout(0.1)
+        self.conv2 = nn.Conv2d(channel1, channel2, 5)
+        self.bn2 = nn.BatchNorm2d(channel2)
+        self.dropout2 = nn.Dropout(0.1)
+
+        self.fc1 = nn.Linear(channel2 * 5 * 5, 120)
+        self.bn3 = nn.BatchNorm1d(120)
+        self.dropout3 = nn.Dropout(0.1)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.bn1(x)
+        x = self.dropout1(x)
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.bn2(x)
+        x = self.dropout2(x)
+        x = torch.flatten(x, 1) # flatten all dimensions except batch
+        x = F.relu(self.fc1(x))
+        x = self.bn3(x)
+        x = self.dropout3(x)
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+```
+
+
 ## 8 
 使用ResNet18(),显示测试结果
 
 Answer: 
-使用resnet-18，上一问其它参数不变，在测试集上的准确率为83%，与上一问的结果相同。
+使用resnet-18，上一问其它参数不变，在测试集上的准确率为83%，与上一问的结果相同。其在较少参数下能达到这样的效果，说明了其优秀的性能，这可能是因为：
+- 其残差连接能够有效地缓解梯度消失问题，方便层数堆叠
+- 让网络学习残差比学习原始特征更容易，免去了对额外的恒等映射的行为的学习
 
+具体代码如下：
+```python
+class ResNet(nn.Module): # Resnet18
+    def __init__(self):
+        super().__init__()
+        self.model = torchvision.models.resnet18(pretrained=False)
+        if Config.PRETRAINED:
+            self.model.load_state_dict(torch.load(Config.RESNET_PRETRAINED_PATH))
+            for param in self.model.parameters():
+                param.requires_grad = False
+        self.model.fc = nn.Linear(512, 10)
+        self.model.fc.requires_grad_(True)
 
+    def forward(self, x):
+        x = self.model(x)
+        return x
+```
